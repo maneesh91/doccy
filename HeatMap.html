@@ -1,0 +1,256 @@
+<!doctype html>
+<html>
+    <style>
+         body{
+            background-color: gainsboro;
+            text-align: center;
+        }
+        .container{
+           width: : 1000px;
+            height: : 600px;
+            background-color: whitesmoke;
+           
+        }
+        #heatmapdiv{
+           
+             background-color: whitesmoke;
+        }
+         div.tooltip {	
+       position: absolute;			
+			
+    padding: 10px;				
+    font: 12px sans-serif;		
+    background: lightsteelblue;	
+    border: 0px;		
+    border-radius: 8px;			
+    pointer-events: none;			
+}	
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.2.2/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-tip/0.6.7/d3-tip.min.js"></script>
+    <body>
+        
+        <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+ <div id="container">
+           
+           
+        </div>
+
+        <script>
+             const width= 1500;
+            const height = 400;
+            const padding = 144;
+            
+            
+            var colorbrewer = {
+  RdYlBu: {
+    3: ["#fc8d59","#ffffbf","#91bfdb"],
+    4: ["#d7191c","#fdae61","#abd9e9","#2c7bb6"],
+    5: ["#d7191c","#fdae61","#ffffbf","#abd9e9","#2c7bb6"],
+    6: ["#d73027","#fc8d59","#fee090","#e0f3f8","#91bfdb","#4575b4"],
+    7: ["#d73027","#fc8d59","#fee090","#ffffbf","#e0f3f8","#91bfdb","#4575b4"],
+    8: ["#d73027","#f46d43","#fdae61","#fee090","#e0f3f8","#abd9e9","#74add1","#4575b4"],
+    9: ["#d73027","#f46d43","#fdae61","#fee090","#ffffbf","#e0f3f8","#abd9e9","#74add1","#4575b4"],
+    10: ["#a50026","#d73027","#f46d43","#fdae61","#fee090","#e0f3f8","#abd9e9","#74add1","#4575b4","#313695"],
+    11: ["#a50026","#d73027","#f46d43","#fdae61","#fee090","#ffffbf","#e0f3f8","#abd9e9","#74add1","#4575b4","#313695"]
+  },
+  RdBu: {
+    3: ["#ef8a62","#f7f7f7","#67a9cf"],
+    4: ["#ca0020","#f4a582","#92c5de","#0571b0"],
+    5: ["#ca0020","#f4a582","#f7f7f7","#92c5de","#0571b0"],
+    6: ["#b2182b","#ef8a62","#fddbc7","#d1e5f0","#67a9cf","#2166ac"],
+    7: ["#b2182b","#ef8a62","#fddbc7","#f7f7f7","#d1e5f0","#67a9cf","#2166ac"],
+    8: ["#b2182b","#d6604d","#f4a582","#fddbc7","#d1e5f0","#92c5de","#4393c3","#2166ac"],
+    9: ["#b2182b","#d6604d","#f4a582","#fddbc7","#f7f7f7","#d1e5f0","#92c5de","#4393c3","#2166ac"],
+    10: ["#67001f","#b2182b","#d6604d","#f4a582","#fddbc7","#d1e5f0","#92c5de","#4393c3","#2166ac","#053061"],
+    11: ["#67001f","#b2182b","#d6604d","#f4a582","#fddbc7","#f7f7f7","#d1e5f0","#92c5de","#4393c3","#2166ac","#053061"]
+  }
+};
+
+         
+
+            
+           var dataset = 'https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/global-temperature.json';
+            
+           
+            
+            d3.json(dataset, function(data){
+                
+                //header
+                var section = d3.select('body')
+                .append('section');
+                
+                var heading = section.append('heading');
+                heading.append('h1')
+                .attr('id', 'title')
+                .text("Monthly Global land-Surface Temperature");
+                
+              heading.append('h3')
+                .attr('id', 'description')
+                .text(data.monthlyVariance[0]['year'] +"-" + data.monthlyVariance[data.monthlyVariance.length - 1]['year'] + ': base temparature ' + data['baseTemperature'])
+                
+                var years = data.monthlyVariance.map(function(item){
+                 return item["year"];
+                    })
+                
+                 var tooltip = d3.select('body')
+                    .append('div')
+                    .attr('class','tooltip')
+                    .attr('id', 'tooltip')
+                    .style('opacity', 0)
+                
+                var svgArea = section.append('svg')
+                .attr('width', width + padding + padding)
+                .attr('height', height + padding)
+                
+                //Axis 
+                var minyear = d3.min(years);
+                var maxyear = d3.max(years);
+             
+                //X-Axis
+                 var xScale = d3.scaleBand()
+                 .domain(data.monthlyVariance.map((item) => item.year))
+                 .range([0, width],0,0);
+                
+                var xAxis = d3.axisBottom()
+                .scale(xScale)
+                .tickValues(xScale.domain().filter(function(year){
+                  
+                    return year % 10 === 0;
+                }))
+                .tickFormat(function(year){
+                    var date = new Date(0);
+                    date.setUTCFullYear(year);
+                    return d3.timeFormat('%Y')(date)
+                });
+                       
+               svgArea.append('g')
+                .attr('id','x-axis')
+                .attr('transform', "translate("+padding+", "+height+")")
+                .call(xAxis);
+                
+                //Y-Axis
+                var yScale =  d3.scaleBand()
+                .domain([0,1,2,3,4,5,6,7,8,9,10,11])
+                .range([0,height]);
+                
+                var yAxis = d3.axisLeft()
+                .scale(yScale)
+                  .tickValues(yScale.domain())
+                .tickFormat(function(month){
+                    var date = new Date(0)
+                   
+                    date.setUTCMonth(month);
+                    return d3.timeFormat('%B')(date);
+                })
+                
+                 svgArea.append('g')
+                .attr('id','y-axis')
+                .attr('transform',"translate("+padding+", "+0+")")
+                .call(yAxis);
+                
+                 var lehgendColor = colorbrewer.RdYlBu[11].reverse();
+                
+                var variance = data.monthlyVariance.map(function(item){
+                    return item.variance;
+                })
+                var mintemp = data.baseTemperature + d3.min(variance)
+                var maxtemp = data.baseTemperature + d3.max(variance)
+                
+                var varianceColor = d3.scaleThreshold()
+                .domain((function(min, max, count){
+                    var colorArray = [];
+                    var step = (max-min)/count;
+                    var base = min;
+                    for(var i = 1; i < count; i++){
+                        colorArray.push(base + i*step);
+                    }
+                    return colorArray;
+                })(mintemp,maxtemp,lehgendColor.length))
+                .range(lehgendColor)
+                
+                
+                var legendX = d3.scaleLinear()
+                .domain([mintemp, maxtemp])
+                .range([0,width/4]);
+                
+                var legenDXAxis = d3.axisBottom()
+                .scale(legendX)
+                .tickSize(10,0)
+                .tickValues(varianceColor.domain())
+                .tickFormat(d3.format('.1f'));
+                
+               var legend = svgArea.append('g')   
+               .attr('class', 'legend')
+               .attr('id', 'legend')
+               .attr('transform', 'translate(200, 490)');
+                
+                
+               
+            legend.append('g')
+                .selectAll('rect')
+                 .data(varianceColor.range().map(function(color){
+                    var d = varianceColor.invertExtent(color);
+               
+                    if(d[0] == null)
+                        d[0] = legendX.domain()[0];
+                    if(d[1] == null)
+                        d[1] = legendX.domain()[1];
+                
+                    return d;
+                }))
+                .enter()
+                .append('rect')
+                .style('fill', (d,i) => varianceColor(d[0]))
+                .attr('x',(d,i) => legendX(d[0]))
+                .attr('y', 0)
+                .attr('width', function(d){
+                return legendX(d[1]) - legendX(d[0]);
+            })
+                .attr('height', 25)
+                
+                
+            legend.append('g')
+                .attr('transform','translate(0, 25)')
+                .call(legenDXAxis);
+                
+              
+                svgArea.append('g')
+                .attr('class', 'map')
+                .selectAll('rect')
+                .data(data.monthlyVariance)
+                .enter()
+                .append('rect')
+                .attr('class','cell')
+                .attr('data-month', (d,i) => d.month-1)
+                .attr('data-year', (d,i) => d.year)
+                .attr('data-temp', (d,i) => data.baseTemperature + d.variance)
+                .attr('x',(d,i) => xScale(d.year) + 146)
+                .attr('y',(d,i) => yScale(d.month-1))
+                .attr('width', (d,i) => xScale.bandwidth())
+                .attr('height',(d,i) => yScale.bandwidth())
+                .attr('fill', (d,i) => varianceColor(data.baseTemperature + d.variance))
+                .on('mouseover', function(d){
+                    tooltip.transition()
+                    .duration(200)
+                    .style('opacity',1)
+                    var date = new Date(d.year, d.month)
+                    tooltip.attr('data-year', d.year)
+                    .html(d3.timeFormat("%Y - %B")(date)+"</br>"+ (data['baseTemperature'] + d.variance)+ "&#8451;" + "</br>"+ d.variance)
+                    .style('left',(d3.event.pageX) + 'px')
+                    .style('top', (d3.event.pageY-50) + 'px')
+                })
+                .on('mouseout', function(){
+                     tooltip.transition()
+                    .duration(200)
+                    .style('opacity',0)
+                })
+               
+              
+              
+               
+                
+            })
+        </script>
+    </body>
+</html>
